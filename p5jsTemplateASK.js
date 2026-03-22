@@ -3,12 +3,33 @@
 
 // =====================================================
 // ASK p5.js template
-// - safe naming to avoid p5 reserved-name collisions
-// - colorsASK palette system
-// - full-window canvas
+// - safe ASK naming
+// - full-window viewing mode or fixed output mode
+// - square 2160 or 4K widescreen output
 // - resize handling
 // - click / drag interaction hooks
 // - normalized helper utilities
+// =====================================================
+
+// =====================================================
+// TOP-OF-FILE MODE SETTINGS
+// =====================================================
+
+// false = viewing mode >> use current browser window size
+// true  = output mode  >> use fixed export dimensions
+let outputASK = false;
+
+// choose fixed output aspect when outputASK = true
+// options: "square" or "widescreen"
+let aspectModeASK = "widescreen";
+
+const renderPresetsASK = {
+  square: [2160, 2160],
+  widescreen: [3840, 2160]
+};
+
+// =====================================================
+// GLOBALS
 // =====================================================
 
 let colorBackgroundASK, color1ASK, color2ASK, color3ASK, color4ASK;
@@ -19,6 +40,9 @@ let opacASK = 1;
 
 let timeASK = 0;
 
+let canvasWidthASK = 0;
+let canvasHeightASK = 0;
+
 // interaction state
 let mousePressedASK = false;
 let dragStartASK = null;
@@ -26,7 +50,7 @@ let dragCurrentASK = null;
 let dragLengthASK = 0;
 let dragVectorASK = { x: 0, y: 0 };
 
-// optional general-purpose containers
+// optional containers
 let layersASK = [];
 let nodesASK = [];
 
@@ -40,11 +64,14 @@ let centerYASK = 0.5;
 // =====================================================
 
 function setup() {
-  sizeASK = min(windowWidth, windowHeight);
-  createCanvas(windowWidth, windowHeight);
+  updateCanvasSizeASK();
+  createCanvas(canvasWidthASK, canvasHeightASK);
+
   pixelDensity(1);
   noFill();
   smooth();
+
+  sizeASK = min(canvasWidthASK, canvasHeightASK);
 
   initColorsASK();
   renderColorsASK();
@@ -71,16 +98,17 @@ function draw() {
   // ---------------------------------
   drawASK();
 
-  // optional debug / interaction preview
+  // optional overlay / interaction preview
   drawASKOverlay();
 
   pop();
+
   timeASK += 0.02;
 }
 
 // put sketch-specific drawing here
 function drawASK() {
-  // Example starter grid:
+  // example starter drawing
   strokeWeight(weightASK);
   stroke(red(color1ASK), green(color1ASK), blue(color1ASK), 255 * opacASK);
 
@@ -121,14 +149,14 @@ function drawASKOverlay() {
 
 function pushASKView() {
   push();
-  scale(windowWidth, windowHeight);
+  scale(canvasWidthASK, canvasHeightASK);
   translate(centerXASK, centerYASK);
   scale(zoomASK);
 }
 
 function screenToASK(pxASK, pyASK) {
-  let nxASK = pxASK / windowWidth;
-  let nyASK = pyASK / windowHeight;
+  let nxASK = pxASK / canvasWidthASK;
+  let nyASK = pyASK / canvasHeightASK;
 
   return {
     x: (nxASK - centerXASK) / zoomASK,
@@ -138,9 +166,30 @@ function screenToASK(pxASK, pyASK) {
 
 function askToScreen(xASK, yASK) {
   return {
-    x: (xASK * zoomASK + centerXASK) * windowWidth,
-    y: (yASK * zoomASK + centerYASK) * windowHeight
+    x: (xASK * zoomASK + centerXASK) * canvasWidthASK,
+    y: (yASK * zoomASK + centerYASK) * canvasHeightASK
   };
+}
+
+// =====================================================
+// CANVAS SIZE HELPERS
+// =====================================================
+
+function updateCanvasSizeASK() {
+  if (outputASK) {
+    let presetASK = renderPresetsASK[aspectModeASK] || renderPresetsASK.widescreen;
+    canvasWidthASK = presetASK[0];
+    canvasHeightASK = presetASK[1];
+  } else {
+    canvasWidthASK = windowWidth;
+    canvasHeightASK = windowHeight;
+  }
+}
+
+function applyCanvasSizeASK() {
+  updateCanvasSizeASK();
+  resizeCanvas(canvasWidthASK, canvasHeightASK);
+  sizeASK = min(canvasWidthASK, canvasHeightASK);
 }
 
 // =====================================================
@@ -170,7 +219,6 @@ function renderColorsASK() {
   color3ASK = random(colorsASK);
   color4ASK = random(colorsASK);
 
-  // simple visibility safeguard
   let attemptsASK = 0;
   while (
     attemptsASK < 20 &&
@@ -217,6 +265,7 @@ function mouseDragged() {
     x: dragCurrentASK.x - dragStartASK.x,
     y: dragCurrentASK.y - dragStartASK.y
   };
+
   dragLengthASK = dist(
     dragStartASK.x,
     dragStartASK.y,
@@ -281,8 +330,9 @@ function clearASK() {
 // =====================================================
 
 function windowResized() {
-  sizeASK = min(windowWidth, windowHeight);
-  resizeCanvas(windowWidth, windowHeight);
+  if (!outputASK) {
+    applyCanvasSizeASK();
+  }
   windowResizedASKHook();
 }
 
